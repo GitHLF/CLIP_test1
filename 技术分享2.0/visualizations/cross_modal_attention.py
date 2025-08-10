@@ -160,10 +160,14 @@ def visualize_cross_modal_similarity_matrix(attention_data, output_dir="outputs"
 
             for i, sim in enumerate(similarities):
                 # 将NumPy数组元素转换为浮点数
-                sim_value = float(sim)
-                color = 'white' if sim_value < 0.5 else 'black'
-                plt.text(i, 0, f'{sim_value:.3f}', ha='center', va='center',
-                        fontweight='bold', color=color)
+                try:
+                    sim_value = float(sim.item()) if hasattr(sim, 'item') else float(sim)
+                    color = 'white' if sim_value < 0.5 else 'black'
+                    plt.text(i, 0, f'{sim_value:.3f}', ha='center', va='center',
+                            fontweight='bold', color=color)
+                except (ValueError, TypeError) as e:
+                    print(f"警告: 无法转换相似度值 {sim}: {e}")
+                    continue
 
             # 添加文本说明
             text_info = "文本详情:\n\n"
