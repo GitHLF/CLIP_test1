@@ -175,12 +175,14 @@ def visualize_all_scores_distribution(all_individual_results, output_dir="output
     plt.close()
     print(f"所有prompt的分数分布已保存: {output_path}")
 
-def visualize_top_matches(all_individual_results, output_dir="outputs", top_n=8):
+def visualize_top_matches(all_individual_results, prompt_to_group, group_results, output_dir="outputs", top_n=8):
     """
     可视化Top-N最佳匹配
 
     Args:
         all_individual_results: 所有prompt的分析结果
+        prompt_to_group: prompt到组名的映射
+        group_results: 概念组分析结果
         output_dir: 输出目录
         top_n: 显示前N个结果
     """
@@ -198,8 +200,22 @@ def visualize_top_matches(all_individual_results, output_dir="outputs", top_n=8)
 
     prompts_top = [r[0] for r in top_results]
     scores_top = [r[1] for r in top_results]
-    groups_top = [r[2] for r in top_results]
-    variants_top = [r[3] for r in top_results]
+
+    # 获取组名和变体索引
+    groups_top = []
+    variants_top = []
+
+    for prompt in prompts_top:
+        group_name = prompt_to_group.get(prompt, "未知组")
+        groups_top.append(group_name)
+
+        # 查找该prompt在其组内的索引
+        variant_idx = 0  # 默认为第一个变体
+        for group, data in group_results.items():
+            if prompt in data['prompts']:
+                variant_idx = data['prompts'].index(prompt)
+                break
+        variants_top.append(variant_idx)
 
     # 使用颜色渐变
     colors = plt.cm.viridis(np.linspace(0, 1, len(prompts_top)))
@@ -284,13 +300,14 @@ def visualize_group_performance_comparison(group_results, output_dir="outputs"):
     plt.close()
     print(f"概念组性能比较已保存: {output_path}")
 
-def create_concept_group_visualizations(group_results, all_individual_results, output_dir="outputs"):
+def create_concept_group_visualizations(group_results, all_individual_results, prompt_to_group, output_dir="outputs"):
     """
     创建所有概念组相关的可视化
 
     Args:
         group_results: 概念组分析结果
         all_individual_results: 所有prompt的分析结果
+        prompt_to_group: prompt到组名的映射
         output_dir: 输出目录
     """
     print("生成概念组分析可视化...")
@@ -311,7 +328,7 @@ def create_concept_group_visualizations(group_results, all_individual_results, o
     visualize_all_scores_distribution(all_individual_results, output_dir)
 
     # 5. Top-N最佳匹配
-    visualize_top_matches(all_individual_results, output_dir, top_n=8)
+    visualize_top_matches(all_individual_results, prompt_to_group, group_results, output_dir, top_n=8)
 
     # 6. 概念组性能比较（平均分和标准差）
     visualize_group_performance_comparison(group_results, output_dir)

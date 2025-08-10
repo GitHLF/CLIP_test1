@@ -1,8 +1,6 @@
-import gc
 from pathlib import Path
 
 import numpy as np
-import psutil
 import torch
 from PIL import Image
 
@@ -17,32 +15,12 @@ from visualizations.image_preprocessing import create_image_preprocessing_visual
 from visualizations.text_attention_analysis import create_text_attention_visualizations
 
 
-def print_memory_usage():
-    """打印内存使用情况"""
-    try:
-        process = psutil.Process()
-        memory_info = process.memory_info()
-        print(f"内存使用: {memory_info.rss / 1024 / 1024:.1f} MB")
-
-        if torch.cuda.is_available():
-            print(f"GPU内存: {torch.cuda.memory_allocated() / 1024 / 1024:.1f} MB")
-    except:
-        pass
-
-
-def force_cleanup(device):
-    """强制清理内存"""
-    gc.collect()
-    if device == "cuda":
-        torch.cuda.empty_cache()
-        torch.cuda.synchronize()
-
-
-def main(prompts_per_group=5):
+def main(image_path, prompts_per_group=5):
     """
     主函数
 
     Args:
+        image_path (str): 图像文件路径
         prompts_per_group (int): 每个概念组使用的prompt数量
                                1 = 单prompt模式（只选择每组第一个）
                                >1 = 多prompt模式（选择每组前N个）
@@ -50,6 +28,8 @@ def main(prompts_per_group=5):
     print("CLIP多Prompt优化分析演示 2.0 - 单图可视化版本")
     print("=" * 60)
     print(f"配置: 每个概念组使用 {prompts_per_group} 个prompt")
+    print(f"分析图像: {image_path}")
+    print("使用默认prompt配置")
 
     # 设置设备
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -77,14 +57,12 @@ def main(prompts_per_group=5):
     model = model.to(device).eval()
 
     # 2. 准备图像
-    img_path = "dogs_sun_patio.jpeg"
-
     try:
-        if Path(img_path).exists():
-            print(f"加载图像: {img_path}")
-            image = Image.open(img_path).convert('RGB')
+        if Path(image_path).exists():
+            print(f"加载图像: {image_path}")
+            image = Image.open(image_path).convert('RGB')
         else:
-            print(f"图像文件 {img_path} 不存在")
+            print(f"图像文件 {image_path} 不存在")
             return
     except Exception as e:
         print(f"加载图像失败: {e}")
@@ -95,15 +73,12 @@ def main(prompts_per_group=5):
     processed_image_tensor = processor(image)
 
     # 4. 使用优化的多prompt进行分析（传入配置参数）
-    group_results, all_individual_results = analyze_with_optimized_prompts(
+    group_results, all_individual_results, prompt_to_group = analyze_with_optimized_prompts(
         model, tokenizer, image, device, prompts_per_group=prompts_per_group
     )
 
     print(f"\n总共分析了 {len(all_individual_results)} 个prompts")
     print(f"分为 {len(group_results)} 个概念组")
-
-    print_memory_usage()
-    force_cleanup(device)
 
     # 5. 提取注意力权重
     print("\n提取注意力权重用于详细分析...")
@@ -146,9 +121,6 @@ def main(prompts_per_group=5):
         else:
             print("⚠️ 注意力数据为空")
 
-        print_memory_usage()
-        force_cleanup(device)
-
     except Exception as e:
         print(f"✗ 提取注意力权重失败: {e}")
         import traceback
@@ -161,14 +133,8 @@ def main(prompts_per_group=5):
     # 步骤1: 概念组分析可视化
     try:
         print("步骤1: 生成概念组分析可视化...")
-        print_memory_usage()
-
-        create_concept_group_visualizations(group_results, all_individual_results, output_dir)
+        create_concept_group_visualizations(group_results, all_individual_results, prompt_to_group, output_dir)
         print("✓ 概念组分析可视化完成")
-
-        force_cleanup(device)
-        print_memory_usage()
-
     except Exception as e:
         print(f"✗ 概念组分析可视化失败: {e}")
         import traceback
@@ -177,14 +143,8 @@ def main(prompts_per_group=5):
     # 步骤2: 图像预处理可视化
     try:
         print("步骤2: 生成图像预处理可视化...")
-        print_memory_usage()
-
         create_image_preprocessing_visualizations(image, processed_image_tensor, attention_data, output_dir)
         print("✓ 图像预处理可视化完成")
-
-        force_cleanup(device)
-        print_memory_usage()
-
     except Exception as e:
         print(f"✗ 图像预处理可视化失败: {e}")
         import traceback
@@ -193,7 +153,6 @@ def main(prompts_per_group=5):
     # 步骤3: 文本注意力分析可视化
     try:
         print("步骤3: 生成文本注意力分析可视化...")
-        print_memory_usage()
 
         # 验证数据完整性
         if attention_data:
@@ -206,10 +165,6 @@ def main(prompts_per_group=5):
 
         create_text_attention_visualizations(attention_data, output_dir)
         print("✓ 文本注意力分析可视化完成")
-
-        force_cleanup(device)
-        print_memory_usage()
-
     except Exception as e:
         print(f"✗ 文本注意力分析可视化失败: {e}")
         import traceback
@@ -218,14 +173,8 @@ def main(prompts_per_group=5):
     # 步骤4: 跨模态注意力可视化
     try:
         print("步骤4: 生成跨模态注意力可视化...")
-        print_memory_usage()
-
         create_cross_modal_attention_visualizations(image, attention_data, output_dir)
         print("✓ 跨模态注意力可视化完成")
-
-        force_cleanup(device)
-        print_memory_usage()
-
     except Exception as e:
         print(f"✗ 跨模态注意力可视化失败: {e}")
         import traceback
@@ -234,14 +183,8 @@ def main(prompts_per_group=5):
     # 步骤5: 最终结果可视化
     try:
         print("步骤5: 生成最终结果可视化...")
-        print_memory_usage()
-
         create_final_results_visualizations(image, group_results, output_dir)
         print("✓ 最终结果可视化完成")
-
-        force_cleanup(device)
-        print_memory_usage()
-
     except Exception as e:
         print(f"✗ 最终结果可视化失败: {e}")
         import traceback
@@ -283,15 +226,12 @@ def main(prompts_per_group=5):
 
     print(f"\n分析完成！所有可视化文件已保存到 {output_dir} 目录")
 
-    # 最终清理
-    force_cleanup(device)
-    print_memory_usage()
-
 
 if __name__ == "__main__":
-    # 可以通过修改这个参数来切换模式
-    PROMPTS_PER_GROUP = 4  # 改为1表示单prompt模式，改为5表示多prompt模式
+    # 配置参数
+    IMAGE_PATH = "dogs_sun_patio.jpeg"  # 图像文件路径
+    PROMPTS_PER_GROUP = 4  # 每个概念组使用的prompt数量 (1=单prompt模式)
 
     print(f"启动分析，配置: 每组使用 {PROMPTS_PER_GROUP} 个prompt")
-    main(prompts_per_group=PROMPTS_PER_GROUP)
+    main(image_path=IMAGE_PATH, prompts_per_group=PROMPTS_PER_GROUP)
 

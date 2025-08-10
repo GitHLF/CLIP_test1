@@ -6,6 +6,7 @@
 
 - 支持单Prompt模式和多Prompt模式
 - 每个概念组可配置使用的prompt数量
+- 支持自定义图像文件和prompt配置
 - 详细的可视化分析，每个图单独保存
 - 完整展示概念组中的多个prompt变体及其匹配分数
 - 包含图像预处理、文本注意力、跨模态注意力等多种可视化
@@ -59,7 +60,7 @@
 
 1. 确保已安装所需依赖：
    ```
-   pip install torch torchvision transformers pillow matplotlib numpy psutil
+   pip install torch torchvision transformers pillow matplotlib numpy
    ```
 
 2. 运行主程序：
@@ -67,15 +68,73 @@
    python main.py
    ```
 
-3. 可以通过修改`main.py`中的`PROMPTS_PER_GROUP`参数来切换模式：
-   - `PROMPTS_PER_GROUP = 1`: 单prompt模式
-   - `PROMPTS_PER_GROUP > 1`: 多prompt模式
+3. 命令行参数：
+   ```
+   python main.py --help
+   ```
 
-4. 输出结果将保存在`outputs_single_prompt_v2`或`outputs_{N}prompts_v2`目录中。
+   可用参数：
+   - `--image IMAGE`: 要分析的图像文件路径（默认：dogs_sun_patio.jpeg）
+   - `--prompt_file PROMPT_FILE`: 自定义prompt配置文件路径（JSON格式）
+   - `--prompts_per_group PROMPTS_PER_GROUP`: 每个概念组使用的prompt数量（1=单prompt模式，默认：4）
+
+4. 示例：
+   ```
+   # 使用默认配置
+   python main.py
+
+   # 分析自定义图像
+   python main.py --image my_image.jpg
+
+   # 使用自定义prompt配置
+   python main.py --prompt_file my_prompts.json
+
+   # 单prompt模式
+   python main.py --prompts_per_group 1
+
+   # 完整自定义
+   python main.py --image my_image.jpg --prompt_file my_prompts.json --prompts_per_group 3
+   ```
+
+5. 输出结果将保存在`outputs_single_prompt_v2`或`outputs_{N}prompts_v2`目录中。
+
+## 自定义Prompt配置
+
+可以创建JSON格式的自定义prompt配置文件，格式如下：
+
+```json
+{
+  "概念组名称1": [
+    "prompt变体1",
+    "prompt变体2",
+    "prompt变体3"
+  ],
+  "概念组名称2": [
+    "prompt变体1",
+    "prompt变体2"
+  ]
+}
+```
+
+例如：
+
+```json
+{
+  "猫咪": [
+    "一只猫坐在窗台上",
+    "猫咪在窗户旁边",
+    "a cat sitting by the window"
+  ],
+  "狗狗": [
+    "一只狗在草地上奔跑",
+    "狗狗在户外玩耍",
+    "dog running on grass"
+  ]
+}
+```
 
 ## 注意事项
 
-- 需要足够的内存和GPU资源来处理大量的可视化
-- 如果遇到内存问题，可以减少`PROMPTS_PER_GROUP`的值
 - 所有可视化图像按照编号顺序排列，便于查看
+- 如果未指定自定义prompt文件，将使用默认的概念组配置
 

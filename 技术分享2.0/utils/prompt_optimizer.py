@@ -1,7 +1,11 @@
+import json
+
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
+
 from .image_processor import SimpleImageProcessor
+
 
 def create_optimized_prompts():
     """创建优化的prompt集合"""
@@ -38,6 +42,37 @@ def create_optimized_prompts():
         ]
     }
     return prompt_groups
+
+def load_prompt_groups(prompt_file):
+    """
+    从JSON文件加载自定义prompt配置
+
+    Args:
+        prompt_file (str): JSON文件路径
+
+    Returns:
+        dict: 概念组和对应的prompt列表
+    """
+    try:
+        with open(prompt_file, 'r', encoding='utf-8') as f:
+            prompt_groups = json.load(f)
+
+        # 验证格式是否正确
+        if not isinstance(prompt_groups, dict):
+            print(f"⚠️ 格式错误: prompt文件应该是一个字典")
+            return create_optimized_prompts()
+
+        # 验证每个组是否包含prompt列表
+        for group_name, prompts in prompt_groups.items():
+            if not isinstance(prompts, list) or not all(isinstance(p, str) for p in prompts):
+                print(f"⚠️ 格式错误: 组 '{group_name}' 的prompts应该是字符串列表")
+                return create_optimized_prompts()
+
+        print(f"✓ 成功加载自定义prompt配置，包含 {len(prompt_groups)} 个概念组")
+        return prompt_groups
+    except Exception as e:
+        print(f"⚠️ 加载prompt文件失败: {e}，使用默认配置")
+        return create_optimized_prompts()
 
 def analyze_with_optimized_prompts(model, tokenizer, image, device="cpu", prompts_per_group=5):
     """
@@ -157,5 +192,5 @@ def analyze_with_optimized_prompts(model, tokenizer, image, device="cpu", prompt
                 'prompts': prompts
             }
 
-    return group_results, all_individual_results
+    return group_results, all_individual_results, prompt_to_group
 
