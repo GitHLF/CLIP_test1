@@ -36,14 +36,18 @@ def main(image_path, prompts_per_group=5):
     print(f"使用设备: {device}")
 
     # 创建输出目录（根据配置命名）
+    # 提取图像文件名（不含扩展名）
+    image_name = Path(image_path).stem
+
     if prompts_per_group == 1:
-        output_dir = "outputs_single_prompt_v2"
+        sub_dir = f"single_prompt_{image_name}"
         mode_name = "单Prompt模式"
     else:
-        output_dir = f"outputs_{prompts_per_group}prompts_v2"
+        sub_dir = f"{prompts_per_group}prompts_{image_name}"
         mode_name = f"多Prompt模式({prompts_per_group}个/组)"
 
-    Path(output_dir).mkdir(exist_ok=True)
+    output_dir = Path("outputs") / sub_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
     print(f"输出目录: {output_dir}")
     print(f"分析模式: {mode_name}")
 
