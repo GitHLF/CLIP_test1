@@ -4,8 +4,17 @@ from pathlib import Path
 import torch
 
 
-def load_local_clip_model():
-    """加载本地CLIP模型"""
+def load_local_clip_model(model_name="openai/clip-vit-base-patch32"):
+    """加载本地CLIP模型
+
+    Args:
+        model_name: 模型名称或路径
+
+    Returns:
+        model: CLIP模型
+        tokenizer: 分词器
+        success: 是否成功加载
+    """
     print("步骤1: 搜索本地CLIP模型...")
 
     # 检查可能的模型路径
@@ -16,7 +25,10 @@ def load_local_clip_model():
         "./models",
         "../models/models--openai--clip-vit-base-patch32/snapshots",
         "../models/models--openai--clip-vit-large-patch14/snapshots",
-        "../models"
+        "../models",
+        "../../models/models--openai--clip-vit-base-patch32/snapshots",
+        "../../models/models--openai--clip-vit-large-patch14/snapshots",
+        "../../models"
     ]
 
     local_model_path = None
@@ -79,15 +91,30 @@ def load_local_clip_model():
                 print("所有tokenizer加载方法都失败")
                 return None, None, False
 
-            print("本地CLIP模型加载成功")
+            print("✓ 本地CLIP模型加载成功")
             return model, tokenizer, True
 
         except Exception as e:
-            print(f"本地模型加载失败: {e}")
+            print(f"✗ 本地模型加载失败: {e}")
             return None, None, False
     else:
-        print("未找到本地模型文件")
-        return None, None, False
+        print("未找到本地模型文件，尝试在线加载...")
+        try:
+            # 尝试在线加载，但设置较长的超时时间
+            from transformers import CLIPModel, CLIPTokenizer
+            import os
+
+            # 设置较长的超时时间
+            os.environ['HF_HUB_DOWNLOAD_TIMEOUT'] = '300'  # 5分钟超时
+
+            print(f"在线加载CLIP模型: {model_name}")
+            model = CLIPModel.from_pretrained(model_name)
+            tokenizer = CLIPTokenizer.from_pretrained(model_name)
+            print("✓ 在线CLIP模型加载成功")
+            return model, tokenizer, True
+        except Exception as e:
+            print(f"✗ 模型加载失败: {e}")
+            return None, None, False
 
 def create_basic_tokenizer():
     """创建基础的tokenizer"""
